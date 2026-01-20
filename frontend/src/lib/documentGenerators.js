@@ -1,4 +1,4 @@
-import { formatDate, formatCurrency } from '../../lib/storage';
+import { formatDate, formatCurrency } from './storage';
 
 // Generate Purchase Request Document
 export const generatePRDocument = (p) => {
