@@ -7,6 +7,7 @@ import {
   exportToCSV,
   parseCSV
 } from '../lib/storage';
+import * as API from '../services/api';
 
 const PurchaseContext = createContext(null);
 
@@ -22,19 +23,39 @@ export const PurchaseProvider = ({ children }) => {
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [useAPI, setUseAPI] = useState(true);
 
-  // Initialize purchases from localStorage
+  // Initialize purchases - try API first, fallback to localStorage
   useEffect(() => {
-    const stored = getStoredPurchases();
-    if (stored.length === 0) {
-      // Add sample data
-      const sample = getSamplePurchase([]);
-      setPurchases([sample]);
-      savePurchases([sample]);
-    } else {
-      setPurchases(stored);
-    }
-    setLoading(false);
+    const initializePurchases = async () => {
+      setLoading(true);
+      
+      // Try to fetch from API
+      const { data: apiData, error } = await API.getPurchases();
+      
+      if (!error && apiData) {
+        console.log('[PurchaseContext] Loaded from API:', apiData.length, 'purchases');
+        setPurchases(apiData);
+        setUseAPI(true);
+      } else {
+        console.warn('[PurchaseContext] API failed, using localStorage:', error);
+        // Fallback to localStorage
+        const stored = getStoredPurchases();
+        if (stored.length === 0) {
+          // Add sample data
+          const sample = getSamplePurchase([]);
+          setPurchases([sample]);
+          savePurchases([sample]);
+        } else {
+          setPurchases(stored);
+        }
+        setUseAPI(false);
+      }
+      
+      setLoading(false);
+    };
+    
+    initializePurchases();
   }, []);
 
   // Show toast notification
