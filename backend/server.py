@@ -106,7 +106,7 @@ class DashboardStats(BaseModel):
 def generate_id(prefix: str, count: int) -> str:
     """Generate ID with year and count"""
     year = datetime.now().year
-    return f"{year}-{prefix}-{str(count + 1).padStart(3, '0')}"
+    return f"{year}-{prefix}-{str(count + 1).zfill(3)}"
 
 
 # ==================== API Routes ====================
