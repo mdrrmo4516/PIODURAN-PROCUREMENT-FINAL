@@ -153,11 +153,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "GET /api/purchases/{id} endpoint to retrieve specific purchase"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: GET /api/purchases/{id} working correctly. Returns specific purchase by ID. Proper 404 handling for non-existent purchases."
 
   - task: "Update Purchase API Endpoint"
     implemented: true
