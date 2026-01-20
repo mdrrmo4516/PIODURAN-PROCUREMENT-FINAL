@@ -65,56 +65,110 @@ export const PurchaseProvider = ({ children }) => {
   }, []);
 
   // Add new purchase
-  const addPurchase = useCallback((purchaseData) => {
-    const newPurchase = {
-      id: generateId('PF', purchases),
-      prNo: generateId('PR', purchases),
-      poNo: generateId('PO', purchases),
-      obrNo: generateId('OBR', purchases),
-      dvNo: generateId('DV', purchases),
-      ...purchaseData,
-      createdAt: new Date().toISOString()
-    };
+  const addPurchase = useCallback(async (purchaseData) => {
+    if (useAPI) {
+      // Use API
+      const { data, error } = await API.createPurchase(purchaseData);
+      if (error) {
+        showToast(error, 'error');
+        return null;
+      }
+      
+      setPurchases(prev => [...prev, data]);
+      showToast('Purchase saved successfully!', 'success');
+      return data;
+    } else {
+      // Fallback to localStorage
+      const newPurchase = {
+        id: generateId('PF', purchases),
+        prNo: generateId('PR', purchases),
+        poNo: generateId('PO', purchases),
+        obrNo: generateId('OBR', purchases),
+        dvNo: generateId('DV', purchases),
+        ...purchaseData,
+        createdAt: new Date().toISOString()
+      };
 
-    const updated = [...purchases, newPurchase];
-    setPurchases(updated);
-    savePurchases(updated);
-    showToast('Purchase saved successfully!', 'success');
-    return newPurchase;
-  }, [purchases, showToast]);
+      const updated = [...purchases, newPurchase];
+      setPurchases(updated);
+      savePurchases(updated);
+      showToast('Purchase saved successfully!', 'success');
+      return newPurchase;
+    }
+  }, [purchases, showToast, useAPI]);
 
   // Update existing purchase
-  const updatePurchase = useCallback((id, purchaseData) => {
-    const updated = purchases.map(p => 
-      p.id === id 
-        ? { ...p, ...purchaseData, updatedAt: new Date().toISOString() }
-        : p
-    );
-    setPurchases(updated);
-    savePurchases(updated);
-    showToast('Purchase updated successfully!', 'success');
-  }, [purchases, showToast]);
+  const updatePurchase = useCallback(async (id, purchaseData) => {
+    if (useAPI) {
+      // Use API
+      const { data, error } = await API.updatePurchase(id, purchaseData);
+      if (error) {
+        showToast(error, 'error');
+        return;
+      }
+      
+      setPurchases(prev => prev.map(p => p.id === id ? data : p));
+      showToast('Purchase updated successfully!', 'success');
+    } else {
+      // Fallback to localStorage
+      const updated = purchases.map(p => 
+        p.id === id 
+          ? { ...p, ...purchaseData, updatedAt: new Date().toISOString() }
+          : p
+      );
+      setPurchases(updated);
+      savePurchases(updated);
+      showToast('Purchase updated successfully!', 'success');
+    }
+  }, [purchases, showToast, useAPI]);
 
   // Delete purchase
-  const deletePurchase = useCallback((id) => {
-    const updated = purchases.filter(p => p.id !== id);
-    setPurchases(updated);
-    savePurchases(updated);
-    showToast('Purchase deleted successfully!', 'info');
-  }, [purchases, showToast]);
+  const deletePurchase = useCallback(async (id) => {
+    if (useAPI) {
+      // Use API
+      const { error } = await API.deletePurchase(id);
+      if (error) {
+        showToast(error, 'error');
+        return;
+      }
+      
+      setPurchases(prev => prev.filter(p => p.id !== id));
+      showToast('Purchase deleted successfully!', 'info');
+    } else {
+      // Fallback to localStorage
+      const updated = purchases.filter(p => p.id !== id);
+      setPurchases(updated);
+      savePurchases(updated);
+      showToast('Purchase deleted successfully!', 'info');
+    }
+  }, [purchases, showToast, useAPI]);
 
   // Update status
-  const updateStatus = useCallback((id, newStatus) => {
-    const updated = purchases.map(p =>
-      p.id === id
-        ? { ...p, status: newStatus, updatedAt: new Date().toISOString() }
-        : p
-    );
-    setPurchases(updated);
-    savePurchases(updated);
-    const toastType = newStatus === 'Approved' ? 'success' : newStatus === 'Denied' ? 'error' : 'info';
-    showToast(`Status updated to ${newStatus}!`, toastType);
-  }, [purchases, showToast]);
+  const updateStatus = useCallback(async (id, newStatus) => {
+    if (useAPI) {
+      // Use API
+      const { data, error } = await API.updatePurchaseStatus(id, newStatus);
+      if (error) {
+        showToast(error, 'error');
+        return;
+      }
+      
+      setPurchases(prev => prev.map(p => p.id === id ? data : p));
+      const toastType = newStatus === 'Approved' ? 'success' : newStatus === 'Denied' ? 'error' : 'info';
+      showToast(`Status updated to ${newStatus}!`, toastType);
+    } else {
+      // Fallback to localStorage
+      const updated = purchases.map(p =>
+        p.id === id
+          ? { ...p, status: newStatus, updatedAt: new Date().toISOString() }
+          : p
+      );
+      setPurchases(updated);
+      savePurchases(updated);
+      const toastType = newStatus === 'Approved' ? 'success' : newStatus === 'Denied' ? 'error' : 'info';
+      showToast(`Status updated to ${newStatus}!`, toastType);
+    }
+  }, [purchases, showToast, useAPI]);
 
   // Export to CSV
   const handleExport = useCallback(() => {
