@@ -168,11 +168,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "PUT /api/purchases/{id} endpoint to update purchases"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: PUT /api/purchases/{id} working correctly. Updates purchase data and returns updated object. Proper validation and error handling."
 
   - task: "Update Status API Endpoint"
     implemented: true
