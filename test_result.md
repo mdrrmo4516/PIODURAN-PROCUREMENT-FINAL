@@ -183,11 +183,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "PATCH /api/purchases/{id}/status endpoint for status updates"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: PATCH /api/purchases/{id}/status working correctly. Updates purchase status (Pending->Approved) and returns updated object with proper timestamps."
 
   - task: "Delete Purchase API Endpoint"
     implemented: true
