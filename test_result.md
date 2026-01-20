@@ -198,11 +198,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "DELETE /api/purchases/{id} endpoint to delete purchases"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: DELETE /api/purchases/{id} working correctly. Deletes purchase and returns success message. Verified purchase is actually removed (404 on subsequent GET)."
 
   - task: "Dashboard Statistics API Endpoint"
     implemented: true
