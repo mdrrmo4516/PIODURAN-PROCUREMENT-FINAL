@@ -138,11 +138,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "GET /api/purchases endpoint to retrieve all purchases"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: GET /api/purchases working correctly. Returns proper JSON array of purchases. Includes newly created purchases in response."
 
   - task: "Get Single Purchase API Endpoint"
     implemented: true
