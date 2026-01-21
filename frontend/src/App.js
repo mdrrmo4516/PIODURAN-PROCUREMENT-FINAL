@@ -120,7 +120,14 @@ const AppContent = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pattern-dots relative">
+      {/* Decorative Background Elements */}
+      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-3xl animate-float" />
+        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-gradient-to-tr from-accent/10 to-transparent rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-gradient-to-r from-secondary/5 to-transparent rounded-full blur-3xl animate-pulse" />
+      </div>
+
       {/* Hidden file input for CSV import */}
       <input
         type="file"
@@ -140,7 +147,7 @@ const AppContent = () => {
       {/* Main Content */}
       <main 
         className={cn(
-          "min-h-screen p-8 transition-all duration-300",
+          "min-h-screen p-8 transition-all duration-300 relative",
           sidebarCollapsed ? "ml-[70px]" : "ml-[280px]"
         )}
       >
