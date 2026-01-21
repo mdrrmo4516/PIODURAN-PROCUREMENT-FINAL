@@ -18,38 +18,51 @@ export const DashboardStats = () => {
       icon: FileText,
       value: stats.total,
       label: 'Total Requests',
-      colorClass: 'icon-blue'
+      colorClass: 'icon-blue',
+      delay: '0s'
     },
     {
       icon: CheckCircle,
       value: stats.approved,
       label: 'Approved',
-      colorClass: 'icon-green'
+      colorClass: 'icon-green',
+      delay: '0.1s'
     },
     {
       icon: Clock,
       value: stats.pending,
       label: 'Pending',
-      colorClass: 'icon-orange'
+      colorClass: 'icon-orange',
+      delay: '0.2s'
     },
     {
       icon: XCircle,
       value: stats.denied,
       label: 'Denied',
-      colorClass: 'icon-red'
+      colorClass: 'icon-red',
+      delay: '0.3s'
     },
     {
       icon: Banknote,
       value: formatCurrency(stats.totalAmount).split('.')[0],
       label: 'Total Amount',
-      colorClass: 'icon-purple'
+      colorClass: 'icon-purple',
+      delay: '0.4s'
     }
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 mb-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
       {statCards.map((card, index) => (
-        <StatCard key={index} {...card} />
+        <div 
+          key={index}
+          style={{ 
+            animationDelay: card.delay,
+            animationFillMode: 'both'
+          }}
+        >
+          <StatCard {...card} />
+        </div>
       ))}
     </div>
   );
