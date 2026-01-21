@@ -94,16 +94,11 @@ export const PrintModal = ({ open, onClose, purchase, initialDocType = 'pr' }) =
         <title>Print Document</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          .print-preview { background: white; color: black; padding: 40px; max-width: 800px; margin: 0 auto; }
-          .print-preview h2 { text-align: center; margin-bottom: 5px; color: black; }
-          .print-preview .subtitle { text-align: center; font-size: 0.9rem; margin-bottom: 8px; color: #666; }
-          .print-preview table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-          .print-preview th, .print-preview td { border: 1px solid #333; padding: 8px 12px; color: black; }
-          .print-preview th { background: #4472C4; color: white; }
-          .print-header-info { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; margin-top: 3px; }
-          .print-header-info p { margin: 2px 0; color: black; }
-          @media print { body { padding: 0; } }
+          body { font-family: Arial, sans-serif; }
+          @media print {
+            body { margin: 0; padding: 0; }
+            @page { size: A4; margin: 10mm; }
+          }
         </style>
       </head>
       <body>
