@@ -84,32 +84,17 @@ export const PurchaseProvider = ({ children }) => {
     }
   }, [showToast]);
 
-  // Update status
+  // Update status (IndexedDB)
   const updateStatus = useCallback(async (id, newStatus) => {
-    if (useAPI) {
-      // Use API
-      const { data, error } = await API.updatePurchaseStatus(id, newStatus);
-      if (error) {
-        showToast(error, 'error');
-        return;
-      }
-      
-      setPurchases(prev => prev.map(p => p.id === id ? data : p));
+    try {
+      const updated = await DB.updatePurchaseStatus(id, newStatus);
+      setPurchases(prev => prev.map(p => p.id === id ? updated : p));
       const toastType = newStatus === 'Approved' ? 'success' : newStatus === 'Denied' ? 'error' : 'info';
       showToast(`Status updated to ${newStatus}!`, toastType);
-    } else {
-      // Fallback to localStorage
-      const updated = purchases.map(p =>
-        p.id === id
-          ? { ...p, status: newStatus, updatedAt: new Date().toISOString() }
-          : p
-      );
-      setPurchases(updated);
-      savePurchases(updated);
-      const toastType = newStatus === 'Approved' ? 'success' : newStatus === 'Denied' ? 'error' : 'info';
-      showToast(`Status updated to ${newStatus}!`, toastType);
+    } catch (error) {
+      showToast(error?.message || 'Failed to update status', 'error');
     }
-  }, [purchases, showToast, useAPI]);
+  }, [showToast]);
 
   // Export to CSV
   const handleExport = useCallback(() => {
