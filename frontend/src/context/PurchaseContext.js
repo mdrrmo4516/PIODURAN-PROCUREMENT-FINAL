@@ -117,18 +117,34 @@ export const PurchaseProvider = ({ children }) => {
     showToast('CSV exported successfully!', 'success');
   }, [purchases, showToast]);
 
-  // Import from CSV
-  const handleImport = useCallback((text, replace = false) => {
-    const newPurchases = parseCSV(text, purchases);
-    
-    if (newPurchases.length > 0) {
-      const updated = replace ? newPurchases : [...purchases, ...newPurchases];
-      setPurchases(updated);
-      savePurchases(updated);
-      showToast(`Loaded ${newPurchases.length} records from CSV!`, 'success');
+  // Import from CSV (IndexedDB)
+  // Requirement: if imported CSV contains an ID that already exists, OVERWRITE existing record.
+  const handleImport = useCallback(async (text, replace = false) => {
+    try {
+      const imported = parseCSV(text, purchases);
+
+      if (imported.length === 0) {
+        showToast('No valid data found in CSV!', 'error');
+        return false;
+      }
+
+      let next;
+      if (replace) {
+        // Full replace: treat imported as the new dataset
+        next = imported;
+      } else {
+        // Append/merge but overwrite duplicates by id
+        next = mergePurchasesOverwriteById(purchases, imported);
+      }
+
+      await DB.upsertManyPurchases(next);
+      const all = await DB.listPurchases();
+      setPurchases(all);
+
+      showToast(`Loaded ${imported.length} records from CSV!`, 'success');
       return true;
-    } else {
-      showToast('No valid data found in CSV!', 'error');
+    } catch (error) {
+      showToast(error?.message || 'Failed to import CSV', 'error');
       return false;
     }
   }, [purchases, showToast]);
