@@ -62,30 +62,16 @@ export const PurchaseProvider = ({ children }) => {
     }
   }, [showToast]);
 
-  // Update existing purchase
+  // Update existing purchase (IndexedDB)
   const updatePurchase = useCallback(async (id, purchaseData) => {
-    if (useAPI) {
-      // Use API
-      const { data, error } = await API.updatePurchase(id, purchaseData);
-      if (error) {
-        showToast(error, 'error');
-        return;
-      }
-      
-      setPurchases(prev => prev.map(p => p.id === id ? data : p));
+    try {
+      const updated = await DB.updatePurchase(id, purchaseData);
+      setPurchases(prev => prev.map(p => p.id === id ? updated : p));
       showToast('Purchase updated successfully!', 'success');
-    } else {
-      // Fallback to localStorage
-      const updated = purchases.map(p => 
-        p.id === id 
-          ? { ...p, ...purchaseData, updatedAt: new Date().toISOString() }
-          : p
-      );
-      setPurchases(updated);
-      savePurchases(updated);
-      showToast('Purchase updated successfully!', 'success');
+    } catch (error) {
+      showToast(error?.message || 'Failed to update purchase', 'error');
     }
-  }, [purchases, showToast, useAPI]);
+  }, [showToast]);
 
   // Delete purchase
   const deletePurchase = useCallback(async (id) => {
