@@ -18,84 +18,93 @@ code {
 
 @layer base {
     :root {
-        /* MDRRMO Government Blue Theme */
-        --background: 220 30% 8%;
-        --foreground: 210 40% 98%;
+        /* MDRRMO Light Theme with Enhanced Gradients */
+        --background: 220 40% 98%;
+        --foreground: 220 30% 15%;
         
-        --card: 220 30% 12%;
-        --card-foreground: 210 40% 98%;
+        --card: 0 0% 100%;
+        --card-foreground: 220 30% 15%;
         
-        --popover: 220 30% 10%;
-        --popover-foreground: 210 40% 98%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 220 30% 15%;
         
-        /* Primary Blue - Government Blue */
-        --primary: 215 68% 35%;
-        --primary-foreground: 210 40% 98%;
+        /* Primary Blue - Lighter Government Blue */
+        --primary: 215 85% 55%;
+        --primary-foreground: 0 0% 100%;
         
-        /* Secondary - Lighter Blue */
-        --secondary: 205 70% 48%;
-        --secondary-foreground: 210 40% 98%;
+        /* Secondary - Soft Blue */
+        --secondary: 205 90% 65%;
+        --secondary-foreground: 0 0% 100%;
         
-        /* Accent - Cyan */
-        --accent: 193 75% 62%;
-        --accent-foreground: 220 30% 10%;
+        /* Accent - Vibrant Cyan */
+        --accent: 193 95% 68%;
+        --accent-foreground: 220 30% 15%;
         
-        --muted: 220 20% 18%;
-        --muted-foreground: 215 20% 65%;
+        --muted: 220 20% 96%;
+        --muted-foreground: 215 20% 45%;
         
         /* Status Colors */
-        --success: 142 71% 45%;
-        --success-foreground: 210 40% 98%;
+        --success: 142 76% 52%;
+        --success-foreground: 0 0% 100%;
         
-        --warning: 45 93% 47%;
-        --warning-foreground: 220 30% 10%;
+        --warning: 45 93% 58%;
+        --warning-foreground: 220 30% 15%;
         
-        --destructive: 0 72% 51%;
-        --destructive-foreground: 210 40% 98%;
+        --destructive: 0 84% 60%;
+        --destructive-foreground: 0 0% 100%;
         
-        --info: 193 75% 45%;
-        --info-foreground: 210 40% 98%;
+        --info: 193 82% 58%;
+        --info-foreground: 0 0% 100%;
         
-        --border: 215 25% 22%;
-        --input: 215 25% 22%;
-        --ring: 205 70% 48%;
+        --border: 220 20% 90%;
+        --input: 220 20% 92%;
+        --ring: 215 85% 55%;
         
         /* Charts */
-        --chart-1: 215 68% 45%;
-        --chart-2: 142 71% 45%;
-        --chart-3: 45 93% 47%;
-        --chart-4: 280 65% 55%;
-        --chart-5: 0 72% 51%;
+        --chart-1: 215 85% 60%;
+        --chart-2: 142 76% 52%;
+        --chart-3: 45 93% 58%;
+        --chart-4: 280 70% 65%;
+        --chart-5: 0 84% 60%;
         
-        --radius: 0.625rem;
+        --radius: 0.75rem;
         
         /* Custom tokens for the app */
         --sidebar-width: 280px;
         --sidebar-collapsed: 70px;
         
-        /* Gradients */
-        --gradient-primary: linear-gradient(135deg, hsl(215 68% 35%) 0%, hsl(220 30% 15%) 100%);
-        --gradient-sidebar: linear-gradient(180deg, hsl(215 68% 35%) 0%, hsl(220 30% 15%) 100%);
-        --gradient-card: linear-gradient(135deg, hsl(220 30% 15%) 0%, hsl(220 30% 12% / 0.8) 100%);
-        --gradient-button-primary: linear-gradient(90deg, hsl(205 70% 48%) 0%, hsl(193 75% 62%) 100%);
-        --gradient-button-success: linear-gradient(90deg, hsl(142 71% 45%) 0%, hsl(160 64% 45%) 100%);
-        --gradient-button-warning: linear-gradient(90deg, hsl(45 93% 47%) 0%, hsl(25 95% 53%) 100%);
-        --gradient-button-danger: linear-gradient(90deg, hsl(0 72% 51%) 0%, hsl(0 65% 44%) 100%);
-        --gradient-button-info: linear-gradient(90deg, hsl(193 75% 45%) 0%, hsl(193 70% 40%) 100%);
+        /* Enhanced Gradients - Light Theme */
+        --gradient-primary: linear-gradient(135deg, hsl(215 85% 55%) 0%, hsl(193 95% 68%) 100%);
+        --gradient-sidebar: linear-gradient(180deg, hsl(215 85% 60%) 0%, hsl(205 90% 70%) 50%, hsl(193 95% 75%) 100%);
+        --gradient-card: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(220 40% 98%) 100%);
+        --gradient-card-hover: linear-gradient(135deg, hsl(215 85% 98%) 0%, hsl(193 95% 97%) 100%);
+        --gradient-button-primary: linear-gradient(135deg, hsl(215 85% 55%) 0%, hsl(193 95% 68%) 100%);
+        --gradient-button-success: linear-gradient(135deg, hsl(142 76% 52%) 0%, hsl(160 70% 55%) 100%);
+        --gradient-button-warning: linear-gradient(135deg, hsl(45 93% 58%) 0%, hsl(35 95% 60%) 100%);
+        --gradient-button-danger: linear-gradient(135deg, hsl(0 84% 60%) 0%, hsl(340 75% 55%) 100%);
+        --gradient-button-info: linear-gradient(135deg, hsl(193 82% 58%) 0%, hsl(205 90% 65%) 100%);
         
-        /* Shadows */
-        --shadow-sm: 0 2px 4px hsl(220 30% 5% / 0.3);
-        --shadow-md: 0 4px 8px hsl(220 30% 5% / 0.4);
-        --shadow-lg: 0 10px 30px hsl(220 30% 5% / 0.5);
-        --shadow-sidebar: 4px 0 15px hsl(220 30% 5% / 0.3);
-        --shadow-card-hover: 0 10px 30px hsl(220 30% 5% / 0.3);
-        --shadow-button-primary: 0 5px 20px hsl(205 70% 48% / 0.4);
-        --shadow-button-success: 0 4px 15px hsl(142 71% 45% / 0.4);
+        /* Mesh Gradients */
+        --gradient-mesh-1: radial-gradient(at 40% 20%, hsl(215 85% 95%) 0px, transparent 50%),
+                           radial-gradient(at 80% 0%, hsl(193 95% 95%) 0px, transparent 50%),
+                           radial-gradient(at 0% 50%, hsl(205 90% 95%) 0px, transparent 50%);
+        --gradient-mesh-2: radial-gradient(at 0% 0%, hsl(215 85% 90%) 0px, transparent 50%),
+                           radial-gradient(at 50% 50%, hsl(193 95% 90%) 0px, transparent 50%),
+                           radial-gradient(at 100% 100%, hsl(205 90% 90%) 0px, transparent 50%);
+        
+        /* Shadows - Softer for Light Theme */
+        --shadow-sm: 0 2px 8px hsl(220 30% 15% / 0.08);
+        --shadow-md: 0 4px 16px hsl(220 30% 15% / 0.12);
+        --shadow-lg: 0 12px 40px hsl(220 30% 15% / 0.15);
+        --shadow-sidebar: 4px 0 20px hsl(220 30% 15% / 0.1);
+        --shadow-card-hover: 0 16px 48px hsl(220 30% 15% / 0.15);
+        --shadow-button-primary: 0 8px 24px hsl(215 85% 55% / 0.3);
+        --shadow-button-success: 0 8px 24px hsl(142 76% 52% / 0.3);
         
         /* Animation */
-        --transition-fast: 0.15s ease;
-        --transition-base: 0.3s ease;
-        --transition-slow: 0.5s ease;
+        --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-base: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
     .dark {
