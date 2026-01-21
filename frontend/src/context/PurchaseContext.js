@@ -1,13 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
-  getStoredPurchases,
-  savePurchases,
-  generateId,
   getSamplePurchase,
   exportToCSV,
   parseCSV
 } from '../lib/storage';
-import * as API from '../services/api';
+import { mergePurchasesOverwriteById } from '../lib/csvPurchaseMerge';
+import * as DB from '../services/indexedDbPurchases';
 
 const PurchaseContext = createContext(null);
 
