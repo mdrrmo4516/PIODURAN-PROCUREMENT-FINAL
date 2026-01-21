@@ -286,8 +286,55 @@ metadata:
   test_sequence: 1
   run_ui: true
 
+  - task: "IndexedDB Offline-First Storage Implementation"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/services/indexedDbPurchases.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Implemented comprehensive IndexedDB storage with offline-first architecture using idb library"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: IndexedDB offline-first storage working perfectly. Page loads sample data without backend API calls. Storage persists after hard refresh. Auto-generated IDs (YYYY-PREFIX-###) working correctly. Sample purchase 'Repair and Maintenance of MDRRMO Vehicle' loads successfully."
+
+  - task: "CSV Export/Import with Overwrite Functionality"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/context/PurchaseContext.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Implemented CSV export/import with overwrite-by-ID functionality and APPEND mode"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: CSV export working correctly. Import functionality with APPEND mode (cancel replace dialog) working. Overwrite behavior by ID implemented correctly - no duplicates created. mergePurchasesOverwriteById function working as expected."
+
+  - task: "Purchase Form Validation and Creation"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/modals/PurchaseModal.jsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Purchase form with comprehensive validation (title, supplier, items required)"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Purchase form validation working correctly. Requires title, at least one supplier name, and at least one item. Form opens properly, fields are accessible. Validation prevents empty submissions as expected."
+
 test_plan:
-  current_focus: []
+  current_focus:
+    - "IndexedDB Offline-First Storage Implementation"
+    - "CSV Export/Import with Overwrite Functionality"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -301,3 +348,7 @@ agent_communication:
     message: "Dependencies installed and all services restarted successfully. Backend running on port 8001, Frontend on port 3000, MongoDB on port 27017. Ready for frontend UI testing to verify end-to-end functionality."
   - agent: "testing"
     message: "✅ COMPREHENSIVE FRONTEND TESTING COMPLETE: All major functionality tested and working perfectly. Dashboard loads with proper statistics, New Purchase form works with validation, API integration functional, CRUD operations working, mobile responsive. Successfully created, edited, and approved test purchase. Auto-generated PR number (2026-PR-001), calculations working (₱2,500 total), real-time statistics updates. No critical issues found."
+  - agent: "main"
+    message: "Switched storage to IndexedDB (offline-first) implementation. Updated PurchaseContext to use IndexedDB services instead of API calls. Implemented CSV import/export with overwrite-by-ID functionality. Ready for IndexedDB testing."
+  - agent: "testing"
+    message: "✅ INDEXEDDB OFFLINE-FIRST TESTING COMPLETE: Successfully validated all requirements. 1) Page loads sample data without backend API calls ✅ 2) New purchase form accessible with proper validation ✅ 3) IndexedDB persistence after hard refresh confirmed ✅ 4) CSV export functionality working ✅ 5) CSV import with APPEND mode and overwrite-by-ID behavior working ✅ 6) No duplicate records created ✅. Only minor issue: form requires complete data (title, supplier, items) for successful submission, which is proper validation behavior."
