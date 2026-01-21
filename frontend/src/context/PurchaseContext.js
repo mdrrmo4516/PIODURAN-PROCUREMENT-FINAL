@@ -73,26 +73,16 @@ export const PurchaseProvider = ({ children }) => {
     }
   }, [showToast]);
 
-  // Delete purchase
+  // Delete purchase (IndexedDB)
   const deletePurchase = useCallback(async (id) => {
-    if (useAPI) {
-      // Use API
-      const { error } = await API.deletePurchase(id);
-      if (error) {
-        showToast(error, 'error');
-        return;
-      }
-      
+    try {
+      await DB.deletePurchase(id);
       setPurchases(prev => prev.filter(p => p.id !== id));
       showToast('Purchase deleted successfully!', 'info');
-    } else {
-      // Fallback to localStorage
-      const updated = purchases.filter(p => p.id !== id);
-      setPurchases(updated);
-      savePurchases(updated);
-      showToast('Purchase deleted successfully!', 'info');
+    } catch (error) {
+      showToast(error?.message || 'Failed to delete purchase', 'error');
     }
-  }, [purchases, showToast, useAPI]);
+  }, [showToast]);
 
   // Update status
   const updateStatus = useCallback(async (id, newStatus) => {
