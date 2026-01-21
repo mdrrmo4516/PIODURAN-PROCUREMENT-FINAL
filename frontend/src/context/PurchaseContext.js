@@ -21,38 +21,24 @@ export const PurchaseProvider = ({ children }) => {
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
-  const [useAPI, setUseAPI] = useState(true);
 
-  // Initialize purchases - try API first, fallback to localStorage
+  // Initialize purchases from IndexedDB (offline-first)
   useEffect(() => {
     const initializePurchases = async () => {
       setLoading(true);
-      
-      // Try to fetch from API
-      const { data: apiData, error } = await API.getPurchases();
-      
-      if (!error && apiData) {
-        console.log('[PurchaseContext] Loaded from API:', apiData.length, 'purchases');
-        setPurchases(apiData);
-        setUseAPI(true);
-      } else {
-        console.warn('[PurchaseContext] API failed, using localStorage:', error);
-        // Fallback to localStorage
-        const stored = getStoredPurchases();
-        if (stored.length === 0) {
-          // Add sample data
-          const sample = getSamplePurchase([]);
-          setPurchases([sample]);
-          savePurchases([sample]);
-        } else {
-          setPurchases(stored);
-        }
-        setUseAPI(false);
+      try {
+        await DB.ensureInitialized(getSamplePurchase);
+        const all = await DB.listPurchases();
+        console.log('[PurchaseContext] Loaded from IndexedDB:', all.length, 'purchases');
+        setPurchases(all);
+      } catch (error) {
+        console.error('[PurchaseContext] IndexedDB init/load failed:', error);
+        setPurchases([]);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
-    
+
     initializePurchases();
   }, []);
 
