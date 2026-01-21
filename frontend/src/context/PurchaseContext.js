@@ -48,38 +48,19 @@ export const PurchaseProvider = ({ children }) => {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  // Add new purchase
+  // Add new purchase (IndexedDB)
   const addPurchase = useCallback(async (purchaseData) => {
-    if (useAPI) {
-      // Use API
-      const { data, error } = await API.createPurchase(purchaseData);
-      if (error) {
-        showToast(error, 'error');
-        return null;
-      }
-      
-      setPurchases(prev => [...prev, data]);
+    try {
+      const created = await DB.createPurchase(purchaseData);
+      const all = await DB.listPurchases();
+      setPurchases(all);
       showToast('Purchase saved successfully!', 'success');
-      return data;
-    } else {
-      // Fallback to localStorage
-      const newPurchase = {
-        id: generateId('PF', purchases),
-        prNo: generateId('PR', purchases),
-        poNo: generateId('PO', purchases),
-        obrNo: generateId('OBR', purchases),
-        dvNo: generateId('DV', purchases),
-        ...purchaseData,
-        createdAt: new Date().toISOString()
-      };
-
-      const updated = [...purchases, newPurchase];
-      setPurchases(updated);
-      savePurchases(updated);
-      showToast('Purchase saved successfully!', 'success');
-      return newPurchase;
+      return created;
+    } catch (error) {
+      showToast(error?.message || 'Failed to create purchase', 'error');
+      return null;
     }
-  }, [purchases, showToast, useAPI]);
+  }, [showToast]);
 
   // Update existing purchase
   const updatePurchase = useCallback(async (id, purchaseData) => {
