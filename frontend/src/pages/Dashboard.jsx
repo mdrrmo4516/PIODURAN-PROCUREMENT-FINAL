@@ -29,18 +29,26 @@ export const Dashboard = ({ onEdit, onPrint }) => {
   };
 
   return (
-    <div className="animate-fade-in">
-      <DashboardStats />
-      <DataTable
-        title="Recent Purchases"
-        columns={dashboardColumns}
-        data={recentPurchases}
-        onApprove={handleApprove}
-        onDeny={handleDeny}
-        onEdit={onEdit}
-        onPrint={onPrint}
-        onDelete={handleDelete}
-      />
+    <div className="space-y-8">
+      {/* Decorative Header Section */}
+      <div className="relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-accent/5 to-secondary/5 rounded-3xl blur-3xl -z-10" />
+        <DashboardStats />
+      </div>
+      
+      {/* Table Section with Animation */}
+      <div className="animate-slide-up" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
+        <DataTable
+          title="Recent Purchases"
+          columns={dashboardColumns}
+          data={recentPurchases}
+          onApprove={handleApprove}
+          onDeny={handleDeny}
+          onEdit={onEdit}
+          onPrint={onPrint}
+          onDelete={handleDelete}
+        />
+      </div>
     </div>
   );
 };
