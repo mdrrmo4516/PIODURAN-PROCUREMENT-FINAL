@@ -58,58 +58,78 @@ export const DataTable = ({
   };
 
   return (
-    <div className="bg-card rounded-xl p-6 border border-border">
-      <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
-        {title && <h3 className="text-lg font-semibold text-foreground">{title}</h3>}
-        {showSearch && (
-          <SearchBox
-            value={searchTerm}
-            onChange={setSearchTerm}
-            placeholder="Search..."
-          />
-        )}
-      </div>
+    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-border/50 shadow-lg hover:shadow-xl transition-all duration-500 relative overflow-hidden">
+      {/* Decorative Background Pattern */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-primary/5 to-transparent rounded-full blur-3xl -z-0" />
+      
+      <div className="relative z-10">
+        <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
+          {title && (
+            <h3 className="text-2xl font-bold text-foreground flex items-center gap-2">
+              <div className="w-1 h-8 bg-gradient-to-b from-primary to-accent rounded-full" />
+              {title}
+            </h3>
+          )}
+          {showSearch && (
+            <SearchBox
+              value={searchTerm}
+              onChange={setSearchTerm}
+              placeholder="Search..."
+            />
+          )}
+        </div>
 
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-border hover:bg-transparent">
-              {columns.map((column) => (
-                <TableHead
-                  key={column.key}
-                  className="text-accent uppercase text-xs font-semibold tracking-wider bg-foreground/5"
-                >
-                  {column.label}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredData.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="text-center text-muted-foreground py-8"
-                >
-                  No data available
-                </TableCell>
+        <div className="overflow-x-auto rounded-xl">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-border hover:bg-transparent bg-gradient-to-r from-primary/5 to-accent/5">
+                {columns.map((column) => (
+                  <TableHead
+                    key={column.key}
+                    className="text-primary uppercase text-xs font-bold tracking-wider"
+                  >
+                    {column.label}
+                  </TableHead>
+                ))}
               </TableRow>
-            ) : (
-              filteredData.map((item, index) => (
-                <TableRow
-                  key={item.id || index}
-                  className="border-border hover:bg-foreground/5 transition-colors"
-                >
-                  {columns.map((column) => (
-                    <TableCell key={column.key} className="text-sm">
-                      {renderCell(column, item)}
-                    </TableCell>
-                  ))}
+            </TableHeader>
+            <TableBody>
+              {filteredData.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="text-center text-muted-foreground py-12"
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center text-3xl">
+                        📭
+                      </div>
+                      <p className="font-medium">No data available</p>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                filteredData.map((item, index) => (
+                  <TableRow
+                    key={item.id || index}
+                    className="border-border hover:bg-gradient-to-r hover:from-primary/5 hover:to-accent/5 transition-all duration-300 hover:shadow-sm group"
+                    style={{
+                      animation: 'slide-up 0.3s ease-out',
+                      animationDelay: `${index * 0.05}s`,
+                      animationFillMode: 'both'
+                    }}
+                  >
+                    {columns.map((column) => (
+                      <TableCell key={column.key} className="text-sm font-medium group-hover:text-foreground transition-colors">
+                        {renderCell(column, item)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );
