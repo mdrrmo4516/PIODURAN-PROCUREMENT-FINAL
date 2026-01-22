@@ -107,14 +107,14 @@ export const Sidebar = ({ activeSection, onSectionChange, collapsed = false }) =
                       "flex items-center w-full rounded-xl transition-all duration-300 group relative overflow-hidden",
                       collapsed ? "p-3 justify-center" : "px-4 py-3 gap-3",
                       isActive 
-                        ? "bg-white text-primary shadow-lg scale-105"
+                        ? "bg-yellow-400 text-primary shadow-lg scale-105"
                         : "bg-white/10 text-white hover:bg-white/20 hover:translate-x-1 hover:shadow-md"
                     )}
                     title={collapsed ? item.label : undefined}
                   >
                     {/* Hover Gradient Effect */}
                     {!isActive && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-white/70 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                     )}
                     
                     {/* Icon */}
