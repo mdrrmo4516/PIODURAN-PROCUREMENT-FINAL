@@ -347,6 +347,12 @@ code {
 
 /* Print styles */
 @media print {
+    /* Remove browser headers and footers */
+    @page {
+        margin: 0;
+        size: auto;
+    }
+    
     body * {
         visibility: hidden;
     }
@@ -358,9 +364,16 @@ code {
         left: 0;
         top: 0;
         width: 100%;
+        margin: 20mm;
     }
     .no-print {
         display: none !important;
+    }
+    
+    /* Remove all browser-generated content */
+    body {
+        margin: 0;
+        padding: 0;
     }
 }
 
