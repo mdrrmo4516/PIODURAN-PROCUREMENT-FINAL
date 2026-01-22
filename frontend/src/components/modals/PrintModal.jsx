@@ -95,16 +95,25 @@ export const PrintModal = ({ open, onClose, purchase, initialDocType = 'pr' }) =
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: Arial, sans-serif; }
+          @page { 
+            size: A4; 
+            margin: 0; 
+          }
           @media print {
-            body { margin: 0; padding: 0; }
-            @page { size: A4; margin: 10mm; }
+            body { 
+              margin: 0; 
+              padding: 20mm; 
+            }
           }
         </style>
       </head>
       <body>
         ${previewHtml}
         <script>
-          window.onload = function() { window.print(); window.close(); }
+          window.onload = function() { 
+            window.print(); 
+            window.close(); 
+          }
         </script>
       </body>
       </html>
