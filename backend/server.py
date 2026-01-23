@@ -452,19 +452,274 @@ async def get_dashboard_stats():
     try:
         purchases = await db.purchases.find({}, {"_id": 0}).to_list(1000)
         
+        # Calculate recent activity (last 7 days)
+        from datetime import timedelta
+        seven_days_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+        recent_count = len([p for p in purchases if p.get("createdAt", "") >= seven_days_ago])
+        
         stats = {
             "total": len(purchases),
             "approved": len([p for p in purchases if p.get("status") == "Approved"]),
             "pending": len([p for p in purchases if p.get("status") == "Pending"]),
             "denied": len([p for p in purchases if p.get("status") == "Denied"]),
             "completed": len([p for p in purchases if p.get("status") == "Completed"]),
-            "totalAmount": sum(p.get("totalAmount", 0) for p in purchases if p.get("status") != "Denied")
+            "forReview": len([p for p in purchases if p.get("status") == "For Review"]),
+            "totalAmount": sum(p.get("totalAmount", 0) for p in purchases if p.get("status") != "Denied"),
+            "highPriority": len([p for p in purchases if p.get("priority") in ["High", "Urgent"]]),
+            "recentActivity": recent_count
         }
         
         return DashboardStats(**stats)
     except Exception as e:
         logging.error(f"Error fetching stats: {e}")
         raise HTTPException(status_code=500, detail=f"Error fetching stats: {str(e)}")
+
+
+# ==================== Notifications API ====================
+
+async def create_notification_internal(type: str, title: str, message: str, purchase_id: str = None):
+    """Internal helper to create notification"""
+    notification = {
+        "id": str(uuid.uuid4()),
+        "type": type,
+        "title": title,
+        "message": message,
+        "purchaseId": purchase_id,
+        "read": False,
+        "createdAt": datetime.now(timezone.utc).isoformat()
+    }
+    await db.notifications.insert_one(notification)
+    return notification
+
+@api_router.get("/notifications", response_model=List[Notification])
+async def get_notifications(unread_only: bool = Query(False)):
+    try:
+        query = {"read": False} if unread_only else {}
+        notifications = await db.notifications.find(query, {"_id": 0}).sort("createdAt", -1).to_list(100)
+        return [Notification(**n) for n in notifications]
+    except Exception as e:
+        logging.error(f"Error fetching notifications: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/notifications", response_model=Notification)
+async def create_notification(notification_data: NotificationCreate):
+    try:
+        notification = await create_notification_internal(
+            notification_data.type,
+            notification_data.title,
+            notification_data.message,
+            notification_data.purchaseId
+        )
+        return Notification(**notification)
+    except Exception as e:
+        logging.error(f"Error creating notification: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.patch("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str):
+    try:
+        result = await db.notifications.update_one(
+            {"id": notification_id},
+            {"$set": {"read": True}}
+        )
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Notification not found")
+        return {"message": "Notification marked as read"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error marking notification read: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.patch("/notifications/mark-all-read")
+async def mark_all_notifications_read():
+    try:
+        await db.notifications.update_many({"read": False}, {"$set": {"read": True}})
+        return {"message": "All notifications marked as read"}
+    except Exception as e:
+        logging.error(f"Error marking all notifications read: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/notifications/{notification_id}")
+async def delete_notification(notification_id: str):
+    try:
+        result = await db.notifications.delete_one({"id": notification_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Notification not found")
+        return {"message": "Notification deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error deleting notification: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== Attachments API ====================
+
+@api_router.post("/purchases/{purchase_id}/attachments")
+async def upload_attachment(
+    purchase_id: str,
+    file: UploadFile = File(...),
+    uploaded_by: str = Form("System")
+):
+    try:
+        # Check if purchase exists
+        existing = await db.purchases.find_one({"id": purchase_id})
+        if not existing:
+            raise HTTPException(status_code=404, detail="Purchase not found")
+        
+        # Validate file size (max 10MB)
+        contents = await file.read()
+        if len(contents) > 10 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="File too large. Maximum size is 10MB")
+        
+        # Generate unique filename
+        file_id = str(uuid.uuid4())
+        file_ext = Path(file.filename).suffix
+        stored_filename = f"{file_id}{file_ext}"
+        file_path = UPLOADS_DIR / stored_filename
+        
+        # Save file
+        with open(file_path, "wb") as f:
+            f.write(contents)
+        
+        # Create attachment record
+        attachment = {
+            "id": file_id,
+            "filename": stored_filename,
+            "originalName": file.filename,
+            "mimeType": file.content_type or "application/octet-stream",
+            "size": len(contents),
+            "uploadedAt": datetime.now(timezone.utc).isoformat(),
+            "uploadedBy": uploaded_by
+        }
+        
+        # Add audit entry
+        audit_entry = create_audit_entry(
+            "attachment_added",
+            uploaded_by,
+            f"Attachment '{file.filename}' added"
+        )
+        
+        # Update purchase
+        await db.purchases.update_one(
+            {"id": purchase_id},
+            {
+                "$push": {
+                    "attachments": attachment,
+                    "auditTrail": audit_entry
+                },
+                "$set": {"updatedAt": datetime.now(timezone.utc).isoformat()}
+            }
+        )
+        
+        return {"message": "File uploaded successfully", "attachment": attachment}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error uploading attachment: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/purchases/{purchase_id}/attachments/{attachment_id}")
+async def download_attachment(purchase_id: str, attachment_id: str):
+    try:
+        # Find purchase
+        purchase = await db.purchases.find_one({"id": purchase_id})
+        if not purchase:
+            raise HTTPException(status_code=404, detail="Purchase not found")
+        
+        # Find attachment
+        attachment = next(
+            (a for a in purchase.get("attachments", []) if a["id"] == attachment_id),
+            None
+        )
+        if not attachment:
+            raise HTTPException(status_code=404, detail="Attachment not found")
+        
+        file_path = UPLOADS_DIR / attachment["filename"]
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="File not found on server")
+        
+        return FileResponse(
+            path=file_path,
+            filename=attachment["originalName"],
+            media_type=attachment["mimeType"]
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error downloading attachment: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/purchases/{purchase_id}/attachments/{attachment_id}")
+async def delete_attachment(purchase_id: str, attachment_id: str, deleted_by: str = "System"):
+    try:
+        # Find purchase
+        purchase = await db.purchases.find_one({"id": purchase_id})
+        if not purchase:
+            raise HTTPException(status_code=404, detail="Purchase not found")
+        
+        # Find attachment
+        attachment = next(
+            (a for a in purchase.get("attachments", []) if a["id"] == attachment_id),
+            None
+        )
+        if not attachment:
+            raise HTTPException(status_code=404, detail="Attachment not found")
+        
+        # Delete file from disk
+        file_path = UPLOADS_DIR / attachment["filename"]
+        if file_path.exists():
+            file_path.unlink()
+        
+        # Add audit entry
+        audit_entry = create_audit_entry(
+            "attachment_removed",
+            deleted_by,
+            f"Attachment '{attachment['originalName']}' removed"
+        )
+        
+        # Update purchase
+        await db.purchases.update_one(
+            {"id": purchase_id},
+            {
+                "$pull": {"attachments": {"id": attachment_id}},
+                "$push": {"auditTrail": audit_entry},
+                "$set": {"updatedAt": datetime.now(timezone.utc).isoformat()}
+            }
+        )
+        
+        return {"message": "Attachment deleted successfully"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error deleting attachment: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== Audit Trail API ====================
+
+@api_router.get("/purchases/{purchase_id}/history")
+async def get_purchase_history(purchase_id: str):
+    try:
+        purchase = await db.purchases.find_one({"id": purchase_id}, {"_id": 0})
+        if not purchase:
+            raise HTTPException(status_code=404, detail="Purchase not found")
+        
+        return {
+            "purchaseId": purchase_id,
+            "prNo": purchase.get("prNo"),
+            "title": purchase.get("title"),
+            "history": purchase.get("auditTrail", [])
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error fetching history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Include the router in the main app
 app.include_router(api_router)
