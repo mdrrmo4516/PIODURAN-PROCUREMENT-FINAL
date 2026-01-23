@@ -318,3 +318,214 @@ export const upsertManyPurchases = async (purchases) => {
   await tx.done;
   return true;
 };
+
+
+// ==================== Notifications ====================
+
+export const createNotification = async (notificationData) => {
+  const db = await getDb();
+  const notification = {
+    id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    type: notificationData.type || 'info',
+    title: notificationData.title || 'Notification',
+    message: notificationData.message || '',
+    purchaseId: notificationData.purchaseId || null,
+    read: false,
+    createdAt: new Date().toISOString()
+  };
+  await db.put(STORE_NOTIFICATIONS, notification);
+  return notification;
+};
+
+export const listNotifications = async (unreadOnly = false) => {
+  const db = await getDb();
+  let notifications = await db.getAll(STORE_NOTIFICATIONS);
+  
+  if (unreadOnly) {
+    notifications = notifications.filter(n => !n.read);
+  }
+  
+  // Sort by createdAt desc
+  notifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  return notifications;
+};
+
+export const markNotificationRead = async (id) => {
+  const db = await getDb();
+  const notification = await db.get(STORE_NOTIFICATIONS, id);
+  if (notification) {
+    notification.read = true;
+    await db.put(STORE_NOTIFICATIONS, notification);
+  }
+  return notification;
+};
+
+export const markAllNotificationsRead = async () => {
+  const db = await getDb();
+  const notifications = await db.getAll(STORE_NOTIFICATIONS);
+  const tx = db.transaction(STORE_NOTIFICATIONS, 'readwrite');
+  for (const n of notifications) {
+    n.read = true;
+    await tx.store.put(n);
+  }
+  await tx.done;
+  return true;
+};
+
+export const deleteNotification = async (id) => {
+  const db = await getDb();
+  await db.delete(STORE_NOTIFICATIONS, id);
+  return true;
+};
+
+export const getUnreadNotificationCount = async () => {
+  const db = await getDb();
+  const notifications = await db.getAll(STORE_NOTIFICATIONS);
+  return notifications.filter(n => !n.read).length;
+};
+
+
+// ==================== Attachments ====================
+
+export const addAttachment = async (purchaseId, attachmentData) => {
+  const db = await getDb();
+  
+  const attachment = {
+    id: `att-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    purchaseId,
+    filename: attachmentData.filename,
+    originalName: attachmentData.originalName,
+    mimeType: attachmentData.mimeType,
+    size: attachmentData.size,
+    data: attachmentData.data, // Base64 encoded file data
+    uploadedAt: new Date().toISOString(),
+    uploadedBy: attachmentData.uploadedBy || 'System'
+  };
+  
+  await db.put(STORE_ATTACHMENTS, attachment);
+  
+  // Update purchase with attachment reference
+  const purchase = await db.get(STORE_PURCHASES, purchaseId);
+  if (purchase) {
+    const attachmentRef = { ...attachment };
+    delete attachmentRef.data; // Don't store data in purchase record
+    
+    const auditEntry = {
+      timestamp: new Date().toISOString(),
+      action: 'attachment_added',
+      user: attachmentData.uploadedBy || 'System',
+      details: `Attachment '${attachmentData.originalName}' added`,
+      previousValue: null,
+      newValue: null
+    };
+    
+    purchase.attachments = [...(purchase.attachments || []), attachmentRef];
+    purchase.auditTrail = [...(purchase.auditTrail || []), auditEntry];
+    purchase.updatedAt = new Date().toISOString();
+    await db.put(STORE_PURCHASES, purchase);
+  }
+  
+  return attachment;
+};
+
+export const getAttachment = async (attachmentId) => {
+  const db = await getDb();
+  return db.get(STORE_ATTACHMENTS, attachmentId);
+};
+
+export const listAttachments = async (purchaseId) => {
+  const db = await getDb();
+  const allAttachments = await db.getAll(STORE_ATTACHMENTS);
+  return allAttachments.filter(a => a.purchaseId === purchaseId);
+};
+
+export const deleteAttachment = async (attachmentId, deletedBy = 'System') => {
+  const db = await getDb();
+  const attachment = await db.get(STORE_ATTACHMENTS, attachmentId);
+  
+  if (attachment) {
+    // Update purchase to remove attachment reference
+    const purchase = await db.get(STORE_PURCHASES, attachment.purchaseId);
+    if (purchase) {
+      const auditEntry = {
+        timestamp: new Date().toISOString(),
+        action: 'attachment_removed',
+        user: deletedBy,
+        details: `Attachment '${attachment.originalName}' removed`,
+        previousValue: null,
+        newValue: null
+      };
+      
+      purchase.attachments = (purchase.attachments || []).filter(a => a.id !== attachmentId);
+      purchase.auditTrail = [...(purchase.auditTrail || []), auditEntry];
+      purchase.updatedAt = new Date().toISOString();
+      await db.put(STORE_PURCHASES, purchase);
+    }
+    
+    await db.delete(STORE_ATTACHMENTS, attachmentId);
+  }
+  
+  return true;
+};
+
+
+// ==================== Audit Trail ====================
+
+export const getPurchaseHistory = async (purchaseId) => {
+  const db = await getDb();
+  const purchase = await db.get(STORE_PURCHASES, purchaseId);
+  if (!purchase) {
+    throw new Error('Purchase not found');
+  }
+  
+  return {
+    purchaseId,
+    prNo: purchase.prNo,
+    title: purchase.title,
+    history: purchase.auditTrail || []
+  };
+};
+
+
+// ==================== Advanced Filtering ====================
+
+export const filterPurchases = async (filters = {}) => {
+  const db = await getDb();
+  let purchases = await db.getAll(STORE_PURCHASES);
+  
+  // Apply filters
+  if (filters.status) {
+    purchases = purchases.filter(p => p.status === filters.status);
+  }
+  if (filters.priority) {
+    purchases = purchases.filter(p => p.priority === filters.priority);
+  }
+  if (filters.department) {
+    purchases = purchases.filter(p => p.department === filters.department);
+  }
+  if (filters.dateFrom) {
+    purchases = purchases.filter(p => p.date >= filters.dateFrom);
+  }
+  if (filters.dateTo) {
+    purchases = purchases.filter(p => p.date <= filters.dateTo);
+  }
+  if (filters.minAmount !== undefined && filters.minAmount !== null) {
+    purchases = purchases.filter(p => p.totalAmount >= filters.minAmount);
+  }
+  if (filters.maxAmount !== undefined && filters.maxAmount !== null) {
+    purchases = purchases.filter(p => p.totalAmount <= filters.maxAmount);
+  }
+  if (filters.search) {
+    const searchLower = filters.search.toLowerCase();
+    purchases = purchases.filter(p => 
+      p.title?.toLowerCase().includes(searchLower) ||
+      p.prNo?.toLowerCase().includes(searchLower) ||
+      p.poNo?.toLowerCase().includes(searchLower)
+    );
+  }
+  
+  // Sort by createdAt desc
+  purchases.sort((a, b) => new Date(b.createdAt || b.date || 0) - new Date(a.createdAt || a.date || 0));
+  
+  return purchases;
+};
