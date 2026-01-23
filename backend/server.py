@@ -1,14 +1,17 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form, Query
+from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional, Dict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
+from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timezone
+import base64
+import json
 
 
 ROOT_DIR = Path(__file__).parent
@@ -19,6 +22,10 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
+# Create uploads directory
+UPLOADS_DIR = ROOT_DIR / 'uploads'
+UPLOADS_DIR.mkdir(exist_ok=True)
+
 # Create the main app without a prefix
 app = FastAPI(title="MDRRMO Procurement System API")
 
@@ -27,6 +34,32 @@ api_router = APIRouter(prefix="/api")
 
 
 # ==================== Define Models ====================
+
+# Audit Trail Entry
+class AuditEntry(BaseModel):
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    action: str  # created, updated, status_changed, approved, denied, attachment_added, attachment_removed
+    user: str = "System"
+    details: str = ""
+    previousValue: Optional[str] = None
+    newValue: Optional[str] = None
+
+# Approval Info
+class ApprovalInfo(BaseModel):
+    approvedBy: str = ""
+    approvedAt: Optional[str] = None
+    comments: str = ""
+    signature: str = ""
+
+# Attachment Model
+class Attachment(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    filename: str
+    originalName: str
+    mimeType: str
+    size: int
+    uploadedAt: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    uploadedBy: str = "System"
 
 # Supplier Model
 class Supplier(BaseModel):
@@ -43,6 +76,22 @@ class ProcurementItem(BaseModel):
     unitPrice: float
     total: float
 
+# Notification Model
+class Notification(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    type: str  # approval_required, status_changed, purchase_created, comment_added
+    title: str
+    message: str
+    purchaseId: Optional[str] = None
+    read: bool = False
+    createdAt: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class NotificationCreate(BaseModel):
+    type: str
+    title: str
+    message: str
+    purchaseId: Optional[str] = None
+
 # Purchase/Procurement Model
 class Purchase(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -56,14 +105,22 @@ class Purchase(BaseModel):
     date: str
     department: str
     purpose: str = ""
-    status: str = "Pending"  # Pending, Approved, Denied, Completed
+    status: str = "Pending"  # Pending, For Review, Approved, Denied, Completed
+    priority: str = "Normal"  # Low, Normal, High, Urgent
     supplier1: Supplier
     supplier2: Supplier = Supplier()
     supplier3: Supplier = Supplier()
     items: List[ProcurementItem]
     totalAmount: float
+    # Approval workflow fields
+    approvalInfo: ApprovalInfo = ApprovalInfo()
+    # Attachments
+    attachments: List[Attachment] = []
+    # Audit trail
+    auditTrail: List[AuditEntry] = []
     createdAt: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     updatedAt: Optional[str] = None
+    createdBy: str = "System"
 
 class PurchaseCreate(BaseModel):
     title: str
@@ -71,11 +128,27 @@ class PurchaseCreate(BaseModel):
     department: str
     purpose: str = ""
     status: str = "Pending"
+    priority: str = "Normal"
     supplier1: Supplier
     supplier2: Supplier = Supplier()
     supplier3: Supplier = Supplier()
     items: List[ProcurementItem]
     totalAmount: float
+    createdBy: str = "System"
+    
+    @field_validator('title')
+    @classmethod
+    def title_not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Title is required')
+        return v.strip()
+    
+    @field_validator('items')
+    @classmethod
+    def items_not_empty(cls, v):
+        if not v or len(v) == 0:
+            raise ValueError('At least one item is required')
+        return v
 
 class PurchaseUpdate(BaseModel):
     title: Optional[str] = None
@@ -83,6 +156,7 @@ class PurchaseUpdate(BaseModel):
     department: Optional[str] = None
     purpose: Optional[str] = None
     status: Optional[str] = None
+    priority: Optional[str] = None
     supplier1: Optional[Supplier] = None
     supplier2: Optional[Supplier] = None
     supplier3: Optional[Supplier] = None
@@ -91,6 +165,8 @@ class PurchaseUpdate(BaseModel):
 
 class StatusUpdate(BaseModel):
     status: str
+    comments: str = ""
+    approvedBy: str = ""
 
 class DashboardStats(BaseModel):
     total: int
@@ -98,7 +174,10 @@ class DashboardStats(BaseModel):
     pending: int
     denied: int
     completed: int
+    forReview: int
     totalAmount: float
+    highPriority: int
+    recentActivity: int
 
 
 # ==================== Helper Functions ====================
