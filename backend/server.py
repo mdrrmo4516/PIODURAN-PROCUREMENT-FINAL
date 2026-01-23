@@ -358,7 +358,7 @@ async def update_purchase(purchase_id: str, purchase_data: PurchaseCreate):
         logging.error(f"Error updating purchase: {e}")
         raise HTTPException(status_code=500, detail=f"Error updating purchase: {str(e)}")
 
-# Update purchase status
+# Update purchase status with approval workflow
 @api_router.patch("/purchases/{purchase_id}/status", response_model=Purchase)
 async def update_purchase_status(purchase_id: str, status_update: StatusUpdate):
     try:
@@ -367,13 +367,59 @@ async def update_purchase_status(purchase_id: str, status_update: StatusUpdate):
         if not existing:
             raise HTTPException(status_code=404, detail="Purchase not found")
         
+        old_status = existing.get("status", "Pending")
+        new_status = status_update.status
+        
+        # Build update
+        update_data = {
+            "status": new_status,
+            "updatedAt": datetime.now(timezone.utc).isoformat()
+        }
+        
+        # If approved or denied, update approval info
+        if new_status in ["Approved", "Denied"]:
+            update_data["approvalInfo"] = {
+                "approvedBy": status_update.approvedBy or "System",
+                "approvedAt": datetime.now(timezone.utc).isoformat(),
+                "comments": status_update.comments,
+                "signature": ""
+            }
+        
+        # Create audit entry
+        action = "status_changed"
+        if new_status == "Approved":
+            action = "approved"
+        elif new_status == "Denied":
+            action = "denied"
+        
+        audit_entry = create_audit_entry(
+            action,
+            status_update.approvedBy or "System",
+            status_update.comments or f"Status changed from {old_status} to {new_status}",
+            old_status,
+            new_status
+        )
+        
         # Update status
         await db.purchases.update_one(
             {"id": purchase_id},
-            {"$set": {
-                "status": status_update.status,
-                "updatedAt": datetime.now(timezone.utc).isoformat()
-            }}
+            {
+                "$set": update_data,
+                "$push": {"auditTrail": audit_entry}
+            }
+        )
+        
+        # Create notification
+        notification_title = f"Purchase {new_status}"
+        notification_message = f"Purchase request '{existing.get('title')}' has been {new_status.lower()}."
+        if status_update.comments:
+            notification_message += f" Comment: {status_update.comments}"
+        
+        await create_notification_internal(
+            "status_changed",
+            notification_title,
+            notification_message,
+            purchase_id
         )
         
         # Return updated purchase
