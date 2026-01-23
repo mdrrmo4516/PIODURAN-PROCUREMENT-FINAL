@@ -247,11 +247,52 @@ async def create_purchase(purchase_data: PurchaseCreate):
         logging.error(f"Error creating purchase: {e}")
         raise HTTPException(status_code=500, detail=f"Error creating purchase: {str(e)}")
 
-# Get all purchases
+# Get all purchases with optional filtering
 @api_router.get("/purchases", response_model=List[Purchase])
-async def get_purchases():
+async def get_purchases(
+    status: Optional[str] = Query(None, description="Filter by status"),
+    priority: Optional[str] = Query(None, description="Filter by priority"),
+    department: Optional[str] = Query(None, description="Filter by department"),
+    date_from: Optional[str] = Query(None, description="Filter by start date"),
+    date_to: Optional[str] = Query(None, description="Filter by end date"),
+    min_amount: Optional[float] = Query(None, description="Filter by minimum amount"),
+    max_amount: Optional[float] = Query(None, description="Filter by maximum amount"),
+    search: Optional[str] = Query(None, description="Search in title, PR number")
+):
     try:
-        purchases = await db.purchases.find({}, {"_id": 0}).to_list(1000)
+        # Build query filter
+        query = {}
+        
+        if status:
+            query["status"] = status
+        if priority:
+            query["priority"] = priority
+        if department:
+            query["department"] = department
+        if date_from or date_to:
+            date_filter = {}
+            if date_from:
+                date_filter["$gte"] = date_from
+            if date_to:
+                date_filter["$lte"] = date_to
+            if date_filter:
+                query["date"] = date_filter
+        if min_amount is not None or max_amount is not None:
+            amount_filter = {}
+            if min_amount is not None:
+                amount_filter["$gte"] = min_amount
+            if max_amount is not None:
+                amount_filter["$lte"] = max_amount
+            if amount_filter:
+                query["totalAmount"] = amount_filter
+        if search:
+            query["$or"] = [
+                {"title": {"$regex": search, "$options": "i"}},
+                {"prNo": {"$regex": search, "$options": "i"}},
+                {"poNo": {"$regex": search, "$options": "i"}}
+            ]
+        
+        purchases = await db.purchases.find(query, {"_id": 0}).to_list(1000)
         return [Purchase(**p) for p in purchases]
     except Exception as e:
         logging.error(f"Error fetching purchases: {e}")
