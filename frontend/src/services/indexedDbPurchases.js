@@ -211,10 +211,32 @@ export const updatePurchase = async (id, purchaseData) => {
     throw new Error('Purchase not found');
   }
 
+  // Build audit entry for changes
+  const changes = [];
+  if (existing.title !== purchaseData.title && purchaseData.title) {
+    changes.push(`Title changed from '${existing.title}' to '${purchaseData.title}'`);
+  }
+  if (existing.totalAmount !== purchaseData.totalAmount && purchaseData.totalAmount !== undefined) {
+    changes.push(`Amount changed from ${existing.totalAmount} to ${purchaseData.totalAmount}`);
+  }
+  if (existing.status !== purchaseData.status && purchaseData.status) {
+    changes.push(`Status changed from '${existing.status}' to '${purchaseData.status}'`);
+  }
+
+  const auditEntry = {
+    timestamp: new Date().toISOString(),
+    action: 'updated',
+    user: purchaseData.updatedBy || 'System',
+    details: changes.length > 0 ? changes.join('; ') : 'Purchase details updated',
+    previousValue: null,
+    newValue: null
+  };
+
   const updated = {
     ...existing,
     ...purchaseData,
     updatedAt: new Date().toISOString(),
+    auditTrail: [...(existing.auditTrail || []), auditEntry]
   };
 
   await db.put(STORE_PURCHASES, updated);
@@ -227,8 +249,58 @@ export const updatePurchase = async (id, purchaseData) => {
   return updated;
 };
 
-export const updatePurchaseStatus = async (id, status) => {
-  return updatePurchase(id, { status });
+export const updatePurchaseStatus = async (id, status, approvalData = {}) => {
+  const db = await getDb();
+  const existing = await db.get(STORE_PURCHASES, id);
+  if (!existing) {
+    throw new Error('Purchase not found');
+  }
+
+  const oldStatus = existing.status;
+  const nowIso = new Date().toISOString();
+
+  // Determine action type
+  let action = 'status_changed';
+  if (status === 'Approved') action = 'approved';
+  else if (status === 'Denied') action = 'denied';
+
+  const auditEntry = {
+    timestamp: nowIso,
+    action,
+    user: approvalData.approvedBy || 'System',
+    details: approvalData.comments || `Status changed from ${oldStatus} to ${status}`,
+    previousValue: oldStatus,
+    newValue: status
+  };
+
+  const updateData = {
+    status,
+    updatedAt: nowIso,
+    auditTrail: [...(existing.auditTrail || []), auditEntry]
+  };
+
+  // Update approval info for approved/denied
+  if (status === 'Approved' || status === 'Denied') {
+    updateData.approvalInfo = {
+      approvedBy: approvalData.approvedBy || 'System',
+      approvedAt: nowIso,
+      comments: approvalData.comments || '',
+      signature: approvalData.signature || ''
+    };
+  }
+
+  const updated = { ...existing, ...updateData };
+  await db.put(STORE_PURCHASES, updated);
+
+  // Create notification
+  await createNotification({
+    type: 'status_changed',
+    title: `Purchase ${status}`,
+    message: `Purchase request '${existing.title}' has been ${status.toLowerCase()}.${approvalData.comments ? ` Comment: ${approvalData.comments}` : ''}`,
+    purchaseId: id
+  });
+
+  return updated;
 };
 
 export const upsertManyPurchases = async (purchases) => {
