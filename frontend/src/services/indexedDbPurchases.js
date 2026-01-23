@@ -1,10 +1,12 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'mdrrmo_procurement_db';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Upgraded for new features
 
 const STORE_PURCHASES = 'purchases';
 const STORE_META = 'meta';
+const STORE_NOTIFICATIONS = 'notifications';
+const STORE_ATTACHMENTS = 'attachments';
 
 const META_KEY_COUNTERS = 'counters';
 
