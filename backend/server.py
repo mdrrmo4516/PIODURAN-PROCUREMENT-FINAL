@@ -187,12 +187,23 @@ def generate_id(prefix: str, count: int) -> str:
     year = datetime.now().year
     return f"{year}-{prefix}-{str(count + 1).zfill(3)}"
 
+def create_audit_entry(action: str, user: str = "System", details: str = "", prev_value: str = None, new_value: str = None) -> dict:
+    """Create an audit trail entry"""
+    return {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "action": action,
+        "user": user,
+        "details": details,
+        "previousValue": prev_value,
+        "newValue": new_value
+    }
+
 
 # ==================== API Routes ====================
 
 @api_router.get("/")
 async def root():
-    return {"message": "MDRRMO Procurement System API", "version": "1.0"}
+    return {"message": "MDRRMO Procurement System API", "version": "2.0"}
 
 # Create new purchase
 @api_router.post("/purchases", response_model=Purchase)
@@ -210,8 +221,23 @@ async def create_purchase(purchase_data: PurchaseCreate):
         purchase_dict["dvNo"] = generate_id("DV", count)
         purchase_dict["createdAt"] = datetime.now(timezone.utc).isoformat()
         
+        # Initialize new fields
+        purchase_dict["approvalInfo"] = {"approvedBy": "", "approvedAt": None, "comments": "", "signature": ""}
+        purchase_dict["attachments"] = []
+        purchase_dict["auditTrail"] = [
+            create_audit_entry("created", purchase_data.createdBy, f"Purchase request '{purchase_data.title}' created")
+        ]
+        
         # Insert into database
         result = await db.purchases.insert_one(purchase_dict)
+        
+        # Create notification for new purchase
+        await create_notification_internal(
+            "purchase_created",
+            "New Purchase Request",
+            f"Purchase request '{purchase_data.title}' has been created and is pending approval.",
+            purchase_dict["id"]
+        )
         
         # Return created purchase
         created_purchase = await db.purchases.find_one({"id": purchase_dict["id"]}, {"_id": 0})
