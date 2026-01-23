@@ -62,16 +62,32 @@ const computeCountersFromPurchases = (purchases) => {
 
 export const getDb = async () => {
   return openDB(DB_NAME, DB_VERSION, {
-    upgrade(db) {
+    upgrade(db, oldVersion, newVersion, transaction) {
+      // Create purchases store
       if (!db.objectStoreNames.contains(STORE_PURCHASES)) {
         const store = db.createObjectStore(STORE_PURCHASES, { keyPath: 'id' });
         store.createIndex('createdAt', 'createdAt');
         store.createIndex('status', 'status');
         store.createIndex('date', 'date');
+        store.createIndex('priority', 'priority');
       }
 
+      // Create meta store
       if (!db.objectStoreNames.contains(STORE_META)) {
         db.createObjectStore(STORE_META);
+      }
+
+      // Create notifications store (new in v2)
+      if (!db.objectStoreNames.contains(STORE_NOTIFICATIONS)) {
+        const notifStore = db.createObjectStore(STORE_NOTIFICATIONS, { keyPath: 'id' });
+        notifStore.createIndex('createdAt', 'createdAt');
+        notifStore.createIndex('read', 'read');
+      }
+
+      // Create attachments store (new in v2)
+      if (!db.objectStoreNames.contains(STORE_ATTACHMENTS)) {
+        const attachStore = db.createObjectStore(STORE_ATTACHMENTS, { keyPath: 'id' });
+        attachStore.createIndex('purchaseId', 'purchaseId');
       }
     },
   });
