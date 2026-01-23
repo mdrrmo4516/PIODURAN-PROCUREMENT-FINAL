@@ -325,9 +325,27 @@ async def update_purchase(purchase_id: str, purchase_data: PurchaseCreate):
         update_dict = purchase_data.model_dump()
         update_dict["updatedAt"] = datetime.now(timezone.utc).isoformat()
         
+        # Add audit trail entry
+        changes = []
+        if existing.get("title") != update_dict.get("title"):
+            changes.append(f"Title changed from '{existing.get('title')}' to '{update_dict.get('title')}'")
+        if existing.get("totalAmount") != update_dict.get("totalAmount"):
+            changes.append(f"Amount changed from {existing.get('totalAmount')} to {update_dict.get('totalAmount')}")
+        if existing.get("status") != update_dict.get("status"):
+            changes.append(f"Status changed from '{existing.get('status')}' to '{update_dict.get('status')}'")
+        
+        audit_entry = create_audit_entry(
+            "updated",
+            purchase_data.createdBy,
+            "; ".join(changes) if changes else "Purchase details updated"
+        )
+        
         await db.purchases.update_one(
             {"id": purchase_id},
-            {"$set": update_dict}
+            {
+                "$set": update_dict,
+                "$push": {"auditTrail": audit_entry}
+            }
         )
         
         # Return updated purchase
