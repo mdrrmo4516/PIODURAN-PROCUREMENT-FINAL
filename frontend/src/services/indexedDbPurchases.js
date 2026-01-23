@@ -166,14 +166,40 @@ export const createPurchase = async (purchaseData) => {
     obrNo: obr.id,
     dvNo: dv.id,
     status: 'Pending',
+    priority: 'Normal',
     items: [],
     totalAmount: 0,
     createdAt: nowIso,
+    createdBy: 'System',
+    // New fields for enhanced features
+    approvalInfo: {
+      approvedBy: '',
+      approvedAt: null,
+      comments: '',
+      signature: ''
+    },
+    attachments: [],
+    auditTrail: [{
+      timestamp: nowIso,
+      action: 'created',
+      user: purchaseData.createdBy || 'System',
+      details: `Purchase request '${purchaseData.title}' created`,
+      previousValue: null,
+      newValue: null
+    }],
     ...purchaseData,
   };
 
   await db.put(STORE_PURCHASES, purchase);
   await setCounters(db, counters);
+
+  // Create notification for new purchase
+  await createNotification({
+    type: 'purchase_created',
+    title: 'New Purchase Request',
+    message: `Purchase request '${purchase.title}' has been created.`,
+    purchaseId: purchase.id
+  });
 
   return purchase;
 };
