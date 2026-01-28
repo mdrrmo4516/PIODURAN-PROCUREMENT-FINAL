@@ -229,7 +229,7 @@ async def create_purchase(purchase_data: PurchaseCreate):
         ]
         
         # Insert into database
-        result = await db.purchases.insert_one(purchase_dict)
+        await db.purchases.insert_one(purchase_dict)
         
         # Create notification for new purchase
         await create_notification_internal(
